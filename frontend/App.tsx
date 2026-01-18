@@ -97,6 +97,35 @@ const App: React.FC = () => {
     }
   };
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0f0f10] text-gray-100 flex items-center justify-center">
+        <div className="max-w-md text-center">
+          <i className="fa-solid fa-exclamation-triangle text-6xl text-red-500 mb-4 block"></i>
+          <h2 className="text-2xl font-bold mb-2">Error</h2>
+          <p className="text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={loadSubscriptions}
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f0f10] text-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <i className="fa-solid fa-spinner animate-spin text-4xl text-orange-500 mb-4 block"></i>
+          <p className="text-gray-400">Loading subscriptions...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0f0f10] text-gray-100 flex flex-col lg:flex-row">
       {/* Sidebar: Analytics & Insights */}

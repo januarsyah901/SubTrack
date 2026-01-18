@@ -20,6 +20,21 @@ app.use(
 // Routes
 app.use("/api", routes);
 
+// Root endpoint - show API info
+app.get("/", (req, res) => {
+  res.json({
+    name: "SubTrack API",
+    version: "1.0.0",
+    status: "running",
+    documentation: "http://localhost:3001/api",
+    endpoints: {
+      subscriptions: "GET /api/subscriptions",
+      insights: "GET /api/ai/insights",
+      health: "GET /health"
+    }
+  });
+});
+
 // Health check
 app.get("/health", (req, res) => {
   res.json({ status: "OK", timestamp: new Date().toISOString() });

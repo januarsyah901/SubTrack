@@ -10,6 +10,44 @@ interface ModalProps {
   editingSubscription?: Subscription | null;
 }
 
+// Icon mapping by category
+const ICON_BY_CATEGORY: Record<string, string> = {
+  Entertainment: "fa-solid fa-film",
+  Streaming: "fa-solid fa-play",
+  Music: "fa-solid fa-music",
+  Software: "fa-solid fa-computer",
+  Cloud: "fa-solid fa-cloud",
+  Office: "fa-solid fa-file-text",
+  Design: "fa-solid fa-palette",
+  Health: "fa-solid fa-heart",
+  Fitness: "fa-solid fa-dumbbell",
+  Gaming: "fa-solid fa-gamepad",
+  Social: "fa-solid fa-share-nodes",
+  Education: "fa-solid fa-book",
+  Shopping: "fa-solid fa-shopping-bag",
+  News: "fa-solid fa-newspaper",
+  Productivity: "fa-solid fa-list-check",
+  VPN: "fa-solid fa-shield",
+  Storage: "fa-solid fa-database",
+  Communication: "fa-solid fa-comments",
+  General: "fa-solid fa-cube",
+};
+
+const CATEGORY_OPTIONS = Object.keys(ICON_BY_CATEGORY);
+
+const COLOR_PALETTE = [
+  "#FF6B6B", // Red
+  "#FF8E72", // Orange-Red
+  "#FF7F50", // Coral
+  "#FFB84D", // Gold
+  "#FFD93D", // Yellow
+  "#6BCB77", // Green
+  "#4D96FF", // Blue
+  "#6C5CE7", // Purple
+  "#A29BFE", // Light Purple
+  "#FD79A8", // Pink
+];
+
 const SubscriptionModal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
@@ -19,6 +57,8 @@ const SubscriptionModal: React.FC<ModalProps> = ({
 }) => {
   const [smartInput, setSmartInput] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSuccess, setAiSuccess] = useState<boolean>(false);
   const [formData, setFormData] = useState({
     name: "",
     amount: "",
@@ -26,6 +66,7 @@ const SubscriptionModal: React.FC<ModalProps> = ({
     cycle: BillingCycle.MONTHLY,
     category: "Entertainment",
     color: "#ff7f50",
+    icon: "fa-solid fa-film",
   });
 
   useEffect(() => {
@@ -46,35 +87,62 @@ const SubscriptionModal: React.FC<ModalProps> = ({
         cycle: BillingCycle.MONTHLY,
         category: "Entertainment",
         color: "#ff7f50",
+        icon: "fa-solid fa-film",
       });
     }
     setSmartInput("");
+    setAiError(null);
+    setAiSuccess(false);
   }, [editingSubscription, isOpen]);
 
   if (!isOpen) return null;
 
   const handleSmartAdd = async () => {
-    if (!smartInput.trim()) return;
-    setIsAiLoading(true);
-    const result = await parseSmartAdd(smartInput);
-    if (result) {
-      setFormData({
-        name: result.name || "",
-        amount: result.amount?.toString() || "",
-        billingDate:
-          result.billing_date?.toString() ||
-          result.billingDate?.toString() ||
-          "1",
-        cycle:
-          result.cycle === "YEARLY"
-            ? BillingCycle.YEARLY
-            : BillingCycle.MONTHLY,
-        category: result.category || "General",
-        color: "#ff7f50",
-      });
-      setSmartInput("");
+    if (!smartInput.trim()) {
+      setAiError("Please enter a subscription description");
+      return;
     }
-    setIsAiLoading(false);
+    setIsAiLoading(true);
+    setAiError(null);
+    setAiSuccess(false);
+
+    try {
+      const result = await parseSmartAdd(smartInput);
+      
+      if (result && typeof result === "object") {
+        const typedResult = result as any;
+        const selectedCategory = typedResult.category || "General";
+        setFormData({
+          name: typedResult.name || "",
+          amount: typedResult.amount?.toString() || "",
+          billingDate:
+            typedResult.billing_date?.toString() ||
+            typedResult.billingDate?.toString() ||
+            "1",
+          cycle:
+            typedResult.cycle === "YEARLY"
+              ? BillingCycle.YEARLY
+              : BillingCycle.MONTHLY,
+          category: selectedCategory,
+          color: "#ff7f50",
+          icon: ICON_BY_CATEGORY[selectedCategory] || ICON_BY_CATEGORY.General,
+        });
+        setSmartInput("");
+        setAiSuccess(true);
+        setTimeout(() => setAiSuccess(false), 3000);
+      } else {
+        setAiError("Could not parse the subscription. Try a different format.");
+      }
+    } catch (error) {
+      console.error("Smart Add error:", error);
+      setAiError(
+        error instanceof Error
+          ? error.message
+          : "Failed to parse subscription. Please try again."
+      );
+    } finally {
+      setIsAiLoading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -85,7 +153,7 @@ const SubscriptionModal: React.FC<ModalProps> = ({
       billing_date: parseInt(formData.billingDate),
       cycle: formData.cycle,
       category: formData.category,
-      icon: "fa-solid fa-cube",
+      icon: formData.icon,
       color: formData.color,
     };
 
@@ -128,7 +196,7 @@ const SubscriptionModal: React.FC<ModalProps> = ({
               <button
                 onClick={handleSmartAdd}
                 disabled={isAiLoading || !!editingSubscription}
-                className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-xl transition disabled:opacity-50"
+                className="bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-xl transition disabled:opacity-50 flex items-center gap-2"
               >
                 {isAiLoading ? (
                   <i className="fa-solid fa-spinner animate-spin"></i>
@@ -137,6 +205,18 @@ const SubscriptionModal: React.FC<ModalProps> = ({
                 )}
               </button>
             </div>
+            {aiError && (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-start gap-2">
+                <i className="fa-solid fa-triangle-exclamation text-red-500 mt-0.5 flex-shrink-0"></i>
+                <p className="text-xs text-red-400">{aiError}</p>
+              </div>
+            )}
+            {aiSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-start gap-2">
+                <i className="fa-solid fa-check-circle text-emerald-500 mt-0.5 flex-shrink-0"></i>
+                <p className="text-xs text-emerald-400">Subscription parsed successfully! Review and adjust if needed.</p>
+              </div>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

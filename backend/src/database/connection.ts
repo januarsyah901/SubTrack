@@ -109,7 +109,9 @@ export const db = {
     return subscriptions.filter((s) => s.billing_date === date);
   },
 
-  createSubscription: (data: Omit<Subscription, "created_at" | "updated_at">): Subscription => {
+  createSubscription: (
+    data: Omit<Subscription, "created_at" | "updated_at">,
+  ): Subscription => {
     const newSub: Subscription = {
       ...data,
       created_at: new Date().toISOString(),
@@ -119,10 +121,13 @@ export const db = {
     return newSub;
   },
 
-  updateSubscription: (id: string, data: Partial<Subscription>): Subscription | null => {
+  updateSubscription: (
+    id: string,
+    data: Partial<Subscription>,
+  ): Subscription | null => {
     const index = subscriptions.findIndex((s) => s.id === id);
     if (index === -1) return null;
-    
+
     subscriptions[index] = {
       ...subscriptions[index],
       ...data,

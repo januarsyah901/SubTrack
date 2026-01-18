@@ -13,10 +13,13 @@ const App: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] =
+    useState<Subscription | null>(null);
   const [insights, setInsights] = useState<InsightReport | null>(null);
   const [isInsightLoading, setIsInsightLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Load subscriptions on mount
   useEffect(() => {
@@ -52,6 +55,34 @@ const App: React.FC = () => {
     );
   }, [selectedDate, subscriptions]);
 
+  const filteredSubscriptions = useMemo(() => {
+    if (!searchQuery.trim()) return subscriptions;
+    const query = searchQuery.toLowerCase();
+    return subscriptions.filter(
+      (s) =>
+        s.name.toLowerCase().includes(query) ||
+        s.category.toLowerCase().includes(query),
+    );
+  }, [searchQuery, subscriptions]);
+
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, { count: number; total: number }> = {};
+    filteredSubscriptions.forEach((sub) => {
+      if (!stats[sub.category]) {
+        stats[sub.category] = { count: 0, total: 0 };
+      }
+      stats[sub.category].count += 1;
+      if (sub.cycle === BillingCycle.MONTHLY) {
+        stats[sub.category].total += sub.amount;
+      } else {
+        stats[sub.category].total += sub.amount / 12;
+      }
+    });
+    return Object.entries(stats)
+      .map(([category, data]) => ({ category, ...data }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredSubscriptions]);
+
   const fetchInsights = async () => {
     try {
       setIsInsightLoading(true);
@@ -82,6 +113,21 @@ const App: React.FC = () => {
       await loadSubscriptions();
     } catch (err) {
       setError("Failed to add subscription");
+      console.error(err);
+    }
+  };
+
+  const handleUpdateSubscription = async (
+    id: string,
+    updatedSub: Omit<Subscription, "id">,
+  ) => {
+    try {
+      setError(null);
+      await subscriptionApi.update(id, updatedSub);
+      await loadSubscriptions();
+      setEditingSubscription(null);
+    } catch (err) {
+      setError("Failed to update subscription");
       console.error(err);
     }
   };
@@ -135,6 +181,16 @@ const App: React.FC = () => {
             <i className="fa-solid fa-calendar-check text-white text-xl"></i>
           </div>
           <h1 className="text-xl font-bold tracking-tight">SubTrack AI</h1>
+        </div>
+
+        <div className="mb-6">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search subscriptions..."
+            className="w-full bg-[#2c2c2e] border border-gray-700 rounded-xl px-4 py-2 text-sm focus:ring-2 ring-orange-500 outline-none"
+          />
         </div>
 
         <div className="bg-[#2c2c2e] p-5 rounded-3xl mb-6 shadow-sm">
@@ -211,6 +267,36 @@ const App: React.FC = () => {
           )}
         </div>
 
+        {categoryStats.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-bold text-gray-300 uppercase tracking-widest mb-4">
+              Categories
+            </h2>
+            <div className="space-y-2">
+              {categoryStats.map((stat) => (
+                <div
+                  key={stat.category}
+                  className="p-3 bg-[#2c2c2e] rounded-2xl"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-white capitalize">
+                        {stat.category}
+                      </p>
+                      <p className="text-[10px] text-gray-500">
+                        {stat.count} subscription{stat.count !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <p className="text-sm font-bold text-orange-400">
+                      ${stat.total.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-auto pt-6 text-[10px] text-gray-600 font-medium border-t border-gray-800">
           <p>© 2024 SubTrack AI. Secure billing tracker.</p>
         </div>
@@ -272,7 +358,7 @@ const App: React.FC = () => {
               currentDate={currentDate}
               onDateClick={setSelectedDate}
               selectedDate={selectedDate}
-              subscriptions={subscriptions}
+              subscriptions={filteredSubscriptions}
             />
           </div>
 
@@ -314,12 +400,23 @@ const App: React.FC = () => {
                         <p className="font-bold text-white">
                           ${sub.amount.toFixed(2)}
                         </p>
-                        <button
-                          onClick={() => deleteSubscription(sub.id)}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400 transition text-[10px] uppercase font-bold"
-                        >
-                          Delete
-                        </button>
+                        <div className="opacity-0 group-hover:opacity-100 transition flex gap-2 justify-end mt-1">
+                          <button
+                            onClick={() => {
+                              setEditingSubscription(sub);
+                              setIsModalOpen(true);
+                            }}
+                            className="text-blue-500 hover:text-blue-400 transition text-[10px] uppercase font-bold"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteSubscription(sub.id)}
+                            className="text-red-500 hover:text-red-400 transition text-[10px] uppercase font-bold"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -330,17 +427,6 @@ const App: React.FC = () => {
                   <p className="text-sm font-medium">No bills for this date.</p>
                 </div>
               )}
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl shadow-purple-900/10">
-              <h4 className="font-bold text-white mb-2">Pro Plan Benefit</h4>
-              <p className="text-xs text-indigo-100/70 mb-4 leading-relaxed">
-                Unlock advanced charts and automatic bill scanning with our Pro
-                version.
-              </p>
-              <button className="w-full bg-white text-indigo-700 text-xs font-black py-3 rounded-2xl hover:bg-indigo-50 transition uppercase tracking-widest">
-                Upgrade Now
-              </button>
             </div>
           </div>
         </section>
@@ -364,8 +450,13 @@ const App: React.FC = () => {
 
       <SubscriptionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingSubscription(null);
+        }}
         onAdd={handleAddSubscription}
+        onUpdate={handleUpdateSubscription}
+        editingSubscription={editingSubscription}
       />
     </div>
   );

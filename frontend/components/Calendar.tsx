@@ -39,7 +39,7 @@ const Calendar: React.FC<CalendarProps> = ({
       days.push({
         date: d,
         isCurrentMonth: false,
-        subscriptions: subscriptions.filter(s => s.billingDate === d.getDate() && s.cycle === BillingCycle.MONTHLY)
+        subscriptions: subscriptions.filter(s => s.billing_date === d.getDate())
       });
     }
 
@@ -49,7 +49,7 @@ const Calendar: React.FC<CalendarProps> = ({
       days.push({
         date: d,
         isCurrentMonth: true,
-        subscriptions: subscriptions.filter(s => s.billingDate === i)
+        subscriptions: subscriptions.filter(s => s.billing_date === i)
       });
     }
 
@@ -60,7 +60,7 @@ const Calendar: React.FC<CalendarProps> = ({
       days.push({
         date: d,
         isCurrentMonth: false,
-        subscriptions: subscriptions.filter(s => s.billingDate === i && s.cycle === BillingCycle.MONTHLY)
+        subscriptions: subscriptions.filter(s => s.billing_date === i)
       });
     }
 

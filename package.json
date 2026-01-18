@@ -1,0 +1,30 @@
+{
+  "name": "subtrack-ai",
+  "version": "1.0.0",
+  "description": "AI-powered subscription tracker and manager",
+  "private": true,
+  "scripts": {
+    "frontend:install": "cd frontend && npm install",
+    "backend:install": "cd backend && npm install",
+    "install-all": "npm run frontend:install && npm run backend:install",
+    "frontend:dev": "cd frontend && npm run dev",
+    "backend:dev": "cd backend && npm run dev",
+    "dev:all": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:db": "cd backend && npm run db:init",
+    "frontend:build": "cd frontend && npm run build",
+    "backend:build": "cd backend && npm run build",
+    "dev": "echo 'Run these in separate terminals:\\n- npm run frontend:dev\\n- npm run backend:dev' && echo '\\nFirst time setup:\\n- npm run install-all\\n- npm run backend:db'",
+    "build": "npm run frontend:build && npm run backend:build"
+  },
+  "keywords": [
+    "subscription",
+    "tracking",
+    "ai",
+    "budgeting"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
